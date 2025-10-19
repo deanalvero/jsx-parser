@@ -5,7 +5,10 @@ A lightweight, zero-dependency, pure Kotlin Multiplatform library for parsing JS
 This parser is written 100% in `commonMain` and works on all Kotlin targets (JVM, JS, Native, Wasm).
 
 ## Dependency
-TODO
+Add the dependency to your build.gradle. Replace version with what is available [here](https://central.sonatype.com/artifact/io.github.deanalvero/jsx-parser/versions).
+```
+implementation("io.github.deanalvero:jsx-parser:<version>")
+```
 
 ## Usage
 ```
