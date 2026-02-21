@@ -1,3 +1,8 @@
 package io.github.deanalvero.parser.jsx.attributevalue
 
-data class JsxExpressionContainer(val expression: String) : JsxAttributeValue
+import io.github.deanalvero.parser.jsx.node.expression.JsxExpressionNode
+
+data class JsxExpressionContainer(
+    val expression: String,
+    val node: JsxExpressionNode
+) : JsxAttributeValue

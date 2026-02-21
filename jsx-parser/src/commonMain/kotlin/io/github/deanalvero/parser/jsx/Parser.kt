@@ -9,6 +9,7 @@ import io.github.deanalvero.parser.jsx.node.JsxElement
 import io.github.deanalvero.parser.jsx.node.JsxExpression
 import io.github.deanalvero.parser.jsx.node.JsxNode
 import io.github.deanalvero.parser.jsx.node.JsxText
+import io.github.deanalvero.parser.jsx.node.expression.ExpressionParser
 
 internal class Parser(private val tokens: List<Token>) {
     private var current = 0
@@ -41,7 +42,11 @@ internal class Parser(private val tokens: List<Token>) {
             ""
         }
         consume(TokenType.CloseBrace, "Expected '}' to close an expression.")
-        return JsxExpression(expression, openBrace.location)
+        return JsxExpression(
+            expression = expression,
+            node = ExpressionParser.parse(expression),
+            location = openBrace.location
+        )
     }
 
     private fun parseElement(): JsxElement {
@@ -95,13 +100,13 @@ internal class Parser(private val tokens: List<Token>) {
                             consume(TokenType.OpenBrace, "Expected '{' for attribute expression.")
                             val expr = if (check(TokenType.ExpressionContent)) advance().lexeme else ""
                             consume(TokenType.CloseBrace, "Expected '}' to close attribute expression.")
-                            JsxExpressionContainer(expr)
+                            JsxExpressionContainer(expr, ExpressionParser.parse(expr))
                         }
                         else -> error(peek(), "Attribute value must be a string literal or an expression for '$key'.")
                     }
                     attrs.add(JsxAttribute(key, value, keyTok.location))
                 } else {
-                    attrs.add(JsxAttribute(key, JsxExpressionContainer("true"), keyTok.location))
+                    attrs.add(JsxAttribute(key, JsxExpressionContainer("true", ExpressionParser.parse("true")), keyTok.location))
                 }
             } else if (check(TokenType.OpenBrace)) {
                 val braceTok = advance()
@@ -110,9 +115,9 @@ internal class Parser(private val tokens: List<Token>) {
                 val trimmed = expr.trimStart()
                 if (trimmed.startsWith("...")) {
                     val after = trimmed.removePrefix("...").trim()
-                    attrs.add(JsxAttribute("...", JsxExpressionContainer(after), braceTok.location))
+                    attrs.add(JsxAttribute("...", JsxExpressionContainer(after, ExpressionParser.parse(after)), braceTok.location))
                 } else {
-                    attrs.add(JsxAttribute("", JsxExpressionContainer(expr), braceTok.location))
+                    attrs.add(JsxAttribute("", JsxExpressionContainer(expr, ExpressionParser.parse(expr)), braceTok.location))
                 }
             } else {
                 break
