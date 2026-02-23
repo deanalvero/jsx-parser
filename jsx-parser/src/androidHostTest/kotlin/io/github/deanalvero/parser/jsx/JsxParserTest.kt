@@ -6,6 +6,7 @@ import io.github.deanalvero.parser.jsx.node.JsxElement
 import io.github.deanalvero.parser.jsx.node.JsxExpression
 import io.github.deanalvero.parser.jsx.node.JsxNode
 import io.github.deanalvero.parser.jsx.node.JsxText
+import io.github.deanalvero.parser.jsx.node.expression.JsxExpressionNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -90,7 +91,7 @@ class JsxParserTest {
     }
 
     @Test
-    fun testEmptyExpression() {
+    fun emptyExpression() {
         val jsx = "<div>{}</div>"
         val result = JsxParser.parse(jsx)
         val element = assertSuccess(result).first() as JsxElement
@@ -100,7 +101,7 @@ class JsxParserTest {
     }
 
     @Test
-    fun testEmptyAttributeExpression() {
+    fun emptyAttributeExpression() {
         val jsx = "<div data={} />"
         val result = JsxParser.parse(jsx)
         val element = assertSuccess(result).first() as JsxElement
@@ -111,7 +112,7 @@ class JsxParserTest {
     }
 
     @Test
-    fun testMultipleRootNodes() {
+    fun multipleRootNodes() {
         val jsx = "<div></div><p></p>{true}"
         val result = JsxParser.parse(jsx)
         val nodes = assertSuccess(result)
@@ -123,35 +124,35 @@ class JsxParserTest {
     }
 
     @Test
-    fun testMismatchedTagError() {
+    fun mismatchedTagError() {
         val result = JsxParser.parse("<div></p>")
         val error = assertFailure(result)
         assertTrue(error.message.contains("Mismatched closing tag. Expected </div> but got </p>"))
     }
 
     @Test
-    fun testUnclosedTagError() {
+    fun unclosedTagError() {
         val result = JsxParser.parse("<div><p></div>")
         val error = assertFailure(result)
         assertTrue(error.message.contains("Mismatched closing tag"))
     }
 
     @Test
-    fun testInvalidAttributeError() {
+    fun invalidAttributeError() {
         val result = JsxParser.parse("<div class=>")
         val error = assertFailure(result)
         assertTrue(error.message.contains("Attribute value must be a string literal or an expression"))
     }
 
     @Test
-    fun testUnmatchedExpressionBraceError() {
+    fun unmatchedExpressionBraceError() {
         val result = JsxParser.parse("<div>{name</div>")
         val error = assertFailure(result)
         assertTrue(error.message.contains("Unmatched '{' in expression"))
     }
 
     @Test
-    fun testUnterminatedStringError() {
+    fun unterminatedStringError() {
         val result = JsxParser.parse("<div class=\"hello></div>")
         val error = assertFailure(result)
         assertTrue(error.message.contains("Unterminated string"))
@@ -234,6 +235,65 @@ class JsxParserTest {
         val expr = el.children[0]
         assertTrue(expr is JsxExpression)
         assertTrue((expr as JsxExpression).expression.contains("someFn"))
+    }
+
+    @Test
+    fun parsesIdentifier() {
+        val expr = JsxParser.parse("{counter}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.Identifier
+        assertEquals("counter", node.name)
+    }
+
+    @Test
+    fun parsesMemberExpression() {
+        val expr = JsxParser.parse("{styles.main}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.MemberExpression
+        assertEquals(listOf("styles", "main"), node.parts)
+    }
+
+    @Test
+    fun parsesNumberLiteral() {
+        val expr = JsxParser.parse("{42}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.NumberLiteral
+        assertEquals(42.0, node.value)
+    }
+
+    @Test
+    fun parsesStringLiteral() {
+        val expr = JsxParser.parse("{\"hello\"}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.StringLiteral
+        assertEquals("hello", node.value)
+    }
+
+    @Test
+    fun parsesCallExpression() {
+        val expr = JsxParser.parse("{increment(counter)}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.CallExpression
+        assertEquals("increment", node.callee)
+        assertEquals(1, node.arguments.size)
+    }
+
+    @Test
+    fun parsesObjectLiteral() {
+        val expr = JsxParser.parse("{ { color: \"red\", size: 12 } }")
+            .getOrThrow().first() as JsxExpression
+
+        val obj = expr.node as JsxExpressionNode.ObjectLiteral
+        assertEquals(2, obj.properties.size)
+        assertTrue(obj.properties["color"] is JsxExpressionNode.StringLiteral)
+        assertTrue(obj.properties["size"] is JsxExpressionNode.NumberLiteral)
+    }
+
+    @Test
+    fun unknownExpressionFallsBack() {
+        val expr = JsxParser.parse("{a + b}")
+            .getOrThrow().first() as JsxExpression
+        assertTrue(expr.node is JsxExpressionNode.Unknown)
     }
 
     private fun assertSuccess(result: Result<List<JsxNode>>): List<JsxNode> {
