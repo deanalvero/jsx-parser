@@ -132,7 +132,7 @@ kotlin {
 }
 
 mavenPublishing {
-    coordinates("io.github.deanalvero", "jsx-parser", "0.1.0")
+    coordinates("io.github.deanalvero", "jsx-parser", "0.1.1")
 
     pom {
         name.set("JSX Parser")
