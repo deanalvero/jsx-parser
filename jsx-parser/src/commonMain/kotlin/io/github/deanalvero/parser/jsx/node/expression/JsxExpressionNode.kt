@@ -21,8 +21,16 @@ sealed interface JsxExpressionNode {
         val value: Double
     ) : JsxExpressionNode
 
+    data class BooleanLiteral(
+        val value: Boolean
+    ) : JsxExpressionNode
+
     data class ObjectLiteral(
         val properties: Map<String, JsxExpressionNode>
+    ) : JsxExpressionNode
+
+    data class ArrayLiteral(
+        val items: List<JsxExpressionNode>
     ) : JsxExpressionNode
 
     data class CallExpression(

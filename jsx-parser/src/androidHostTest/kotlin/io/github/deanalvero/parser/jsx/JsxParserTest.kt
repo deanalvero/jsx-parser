@@ -296,6 +296,162 @@ class JsxParserTest {
         assertTrue(expr.node is JsxExpressionNode.Unknown)
     }
 
+    @Test
+    fun parsesTrueLiteral() {
+        val expr = JsxParser.parse("{true}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.BooleanLiteral
+        assertEquals(true, node.value)
+    }
+
+    @Test
+    fun parsesFalseLiteral() {
+        val expr = JsxParser.parse("{false}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.BooleanLiteral
+        assertEquals(false, node.value)
+    }
+
+    @Test
+    fun parsesBooleanAsAttributeValue() {
+        val element = JsxParser.parse("<Switch disabled={true} />")
+            .getOrThrow().first() as JsxElement
+
+        val attr = element.attributes.first()
+        assertEquals("disabled", attr.key)
+
+        val container = attr.value as JsxExpressionContainer
+        val node = container.node as JsxExpressionNode.BooleanLiteral
+        assertEquals(true, node.value)
+    }
+
+    @Test
+    fun parsesBooleanInsideObjectLiteral() {
+        val expr = JsxParser.parse("{ { visible: true, disabled: false } }")
+            .getOrThrow().first() as JsxExpression
+
+        val obj = expr.node as JsxExpressionNode.ObjectLiteral
+        assertEquals(2, obj.properties.size)
+
+        val visible = obj.properties["visible"] as JsxExpressionNode.BooleanLiteral
+        assertEquals(true, visible.value)
+
+        val disabled = obj.properties["disabled"] as JsxExpressionNode.BooleanLiteral
+        assertEquals(false, disabled.value)
+    }
+
+    @Test
+    fun trueAndFalseAreNotParsedAsIdentifiers() {
+        val trueExpr = JsxParser.parse("{true}").getOrThrow().first() as JsxExpression
+        val falseExpr = JsxParser.parse("{false}").getOrThrow().first() as JsxExpression
+
+        assertIs<JsxExpressionNode.BooleanLiteral>(trueExpr.node)
+        assertIs<JsxExpressionNode.BooleanLiteral>(falseExpr.node)
+    }
+
+    @Test
+    fun parsesEmptyArray() {
+        val expr = JsxParser.parse("{[]}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.ArrayLiteral
+        assertTrue(node.items.isEmpty())
+    }
+
+    @Test
+    fun parsesNumberArray() {
+        val expr = JsxParser.parse("{[1, 2, 3]}")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.ArrayLiteral
+
+        assertEquals(3, node.items.size)
+        assertEquals(1.0, (node.items[0] as JsxExpressionNode.NumberLiteral).value)
+        assertEquals(2.0, (node.items[1] as JsxExpressionNode.NumberLiteral).value)
+        assertEquals(3.0, (node.items[2] as JsxExpressionNode.NumberLiteral).value)
+    }
+
+    @Test
+    fun parsesStringArray() {
+        val expr = JsxParser.parse("""{ ["row", "column"] }""")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.ArrayLiteral
+
+        assertEquals(2, node.items.size)
+        assertEquals("row",    (node.items[0] as JsxExpressionNode.StringLiteral).value)
+        assertEquals("column", (node.items[1] as JsxExpressionNode.StringLiteral).value)
+    }
+
+    @Test
+    fun parsesMixedArray() {
+        val expr = JsxParser.parse("""{ [1, "two", true, false] }""")
+            .getOrThrow().first() as JsxExpression
+        val node = expr.node as JsxExpressionNode.ArrayLiteral
+
+        assertEquals(4, node.items.size)
+        assertIs<JsxExpressionNode.NumberLiteral>(node.items[0])
+        assertIs<JsxExpressionNode.StringLiteral>(node.items[1])
+        assertIs<JsxExpressionNode.BooleanLiteral>(node.items[2])
+        assertIs<JsxExpressionNode.BooleanLiteral>(node.items[3])
+        assertEquals(true,  (node.items[2] as JsxExpressionNode.BooleanLiteral).value)
+        assertEquals(false, (node.items[3] as JsxExpressionNode.BooleanLiteral).value)
+    }
+
+    @Test
+    fun parsesNestedArray() {
+        val expr = JsxParser.parse("{ [[1, 2], [3, 4]] }")
+            .getOrThrow().first() as JsxExpression
+        val outer = expr.node as JsxExpressionNode.ArrayLiteral
+
+        assertEquals(2, outer.items.size)
+
+        val first = outer.items[0] as JsxExpressionNode.ArrayLiteral
+        assertEquals(1.0, (first.items[0] as JsxExpressionNode.NumberLiteral).value)
+        assertEquals(2.0, (first.items[1] as JsxExpressionNode.NumberLiteral).value)
+
+        val second = outer.items[1] as JsxExpressionNode.ArrayLiteral
+        assertEquals(3.0, (second.items[0] as JsxExpressionNode.NumberLiteral).value)
+        assertEquals(4.0, (second.items[1] as JsxExpressionNode.NumberLiteral).value)
+    }
+
+    @Test
+    fun parsesArrayAsAttributeValue() {
+        val element = JsxParser.parse("""<Text fontVariant={["small-caps"]} />""")
+            .getOrThrow().first() as JsxElement
+
+        val attr = element.attributes.first()
+        assertEquals("fontVariant", attr.key)
+
+        val container = attr.value as JsxExpressionContainer
+        val node = container.node as JsxExpressionNode.ArrayLiteral
+        assertEquals(1, node.items.size)
+        assertEquals("small-caps", (node.items[0] as JsxExpressionNode.StringLiteral).value)
+    }
+
+    @Test
+    fun parsesArrayInsideObjectLiteral() {
+        val expr = JsxParser.parse("{ { transform: [{rotate: '45deg'}] } }")
+            .getOrThrow().first() as JsxExpression
+
+        val obj = expr.node as JsxExpressionNode.ObjectLiteral
+        val transformArray = obj.properties["transform"] as JsxExpressionNode.ArrayLiteral
+
+        assertEquals(1, transformArray.items.size)
+        val rotateObj = transformArray.items[0] as JsxExpressionNode.ObjectLiteral
+        val rotate = rotateObj.properties["rotate"] as JsxExpressionNode.StringLiteral
+        assertEquals("45deg", rotate.value)
+    }
+
+    @Test
+    fun splitTopLevelHandlesCommasInsideNestedArray() {
+        val expr = JsxParser.parse("{ { padding: [4, 8] } }")
+            .getOrThrow().first() as JsxExpression
+
+        val obj = expr.node as JsxExpressionNode.ObjectLiteral
+        assertEquals(1, obj.properties.size)
+
+        val padding = obj.properties["padding"] as JsxExpressionNode.ArrayLiteral
+        assertEquals(2, padding.items.size)
+    }
+
     private fun assertSuccess(result: Result<List<JsxNode>>): List<JsxNode> {
         if (result.isFailure) {
             fail("Expected success but was failure: ${result.exceptionOrNull()?.message}", result.exceptionOrNull())

@@ -13,7 +13,9 @@ object ExpressionParser {
         }
         parseStringLiteral(text)?.let { return it }
         parseNumberLiteral(text)?.let { return it }
+        parseBooleanLiteral(text)?.let { return it }
         parseObjectLiteral(text)?.let { return it }
+        parseArrayLiteral(text)?.let { return it }
         parseCallExpression(text)?.let { return it }
         parseMember(text)?.let { return it }
         parseIdentifier(text)?.let { return it }
@@ -37,6 +39,13 @@ object ExpressionParser {
         }
         return null
     }
+
+    private fun parseBooleanLiteral(text: String): JsxExpressionNode.BooleanLiteral? =
+        when (text) {
+            "true"  -> JsxExpressionNode.BooleanLiteral(true)
+            "false" -> JsxExpressionNode.BooleanLiteral(false)
+            else    -> null
+        }
 
     private fun parseIdentifier(text: String): JsxExpressionNode.Identifier? {
         if (IDENTIFIER.matches(text)) {
@@ -84,12 +93,25 @@ object ExpressionParser {
         return JsxExpressionNode.ObjectLiteral(props)
     }
 
+    private fun parseArrayLiteral(text: String): JsxExpressionNode.ArrayLiteral? {
+        if (!text.startsWith("[") || !text.endsWith("]")) return null
+        val inner = text.substring(1, text.length - 1).trim()
+        if (inner.isEmpty()) {
+            return JsxExpressionNode.ArrayLiteral(emptyList())
+        }
+        val items = splitTopLevel(inner)
+            .filter { it.isNotBlank() }
+            .map { parse(it) }
+        return JsxExpressionNode.ArrayLiteral(items)
+    }
+
     private fun splitTopLevel(input: String): List<String> {
         val result = mutableListOf<String>()
         val sb = StringBuilder()
 
         var brace = 0
         var paren = 0
+        var bracket = 0
         var quote: Char? = null
 
         for (c in input) {
@@ -119,8 +141,16 @@ object ExpressionParser {
                     paren--
                     sb.append(c)
                 }
+                '[' -> {
+                    bracket++
+                    sb.append(c)
+                }
+                ']' -> {
+                    bracket--
+                    sb.append(c)
+                }
                 ',' -> {
-                    if (brace == 0 && paren == 0) {
+                    if (brace == 0 && paren == 0 && bracket == 0) {
                         result += sb.toString()
                         sb.clear()
                     } else {
