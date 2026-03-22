@@ -54,6 +54,10 @@ private fun JsxExpressionNode.toView(): AstViewNode =
                     AstViewNode(k, listOf(v.toView()))
                 }
             )
-        is JsxExpressionNode.Unknown ->
-            AstViewNode("Unknown($source)")
+        is JsxExpressionNode.Unknown -> AstViewNode("Unknown($source)")
+        is JsxExpressionNode.BooleanLiteral -> AstViewNode("Boolean($value)")
+        is JsxExpressionNode.ArrayLiteral -> AstViewNode(
+            label = "Array[${this.items.size} items]",
+            children = this.items.map { it.toView() }
+        )
     }
