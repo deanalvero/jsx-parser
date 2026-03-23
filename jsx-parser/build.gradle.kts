@@ -132,8 +132,6 @@ kotlin {
 }
 
 mavenPublishing {
-    coordinates("io.github.deanalvero", "jsx-parser", "0.1.1")
-
     pom {
         name.set("JSX Parser")
         description.set("A Kotlin Multiplatform library for parsing JSX syntax into a type-safe Abstract Syntax Tree (AST).")
@@ -163,5 +161,12 @@ mavenPublishing {
 }
 
 signing {
-    useGpgCmd()
+    val signingKey = providers.environmentVariable("ORG_GRADLE_PROJECT_signingInMemoryKey")
+    val signingPassword = providers.environmentVariable("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword")
+
+    if (signingKey.isPresent && signingPassword.isPresent) {
+        useInMemoryPgpKeys(signingKey.get(), signingPassword.get())
+    } else {
+        useGpgCmd()
+    }
 }
